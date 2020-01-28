@@ -1,4 +1,4 @@
-const Database = require('better-sqlite3');
+const {Database} = require('sqlite3');
 const debug = require('debug')('udger-nodejs');
 const Address6 = require('ip-address').Address6;
 const Address4 = require('ip-address').Address4;
@@ -7,6 +7,25 @@ const fs = require('fs-extra');
 const dotProp = require('dot-prop');
 const path = require('path');
 const RandExp = require('randexp');
+
+
+function get(stmt, ...args) {
+    return new Promise((resolve, reject) => {
+        stmt.get(...args, (err, result) => {
+            if(err) return reject(err)
+            resolve(result)
+        })
+    })
+}
+
+function all(stmt, opts) {
+    return new Promise((resolve, reject) => {
+        stmt.all(opts, (err, rows) => {
+            if(err) return reject(err)
+            resolve(rows)
+        })
+    })
+}
 
 /** Class exposing udger parser methods */
 class UdgerParser {
@@ -185,7 +204,7 @@ class UdgerParser {
      * Parse the User-Agent string
      * @param {String} ua - An User-Agent string
      */
-    parseUa(ua, opts) {
+    async parseUa(ua, opts) {
 
         const rua = JSON.parse(JSON.stringify(this.retUa));
         const ruaJson = {};
@@ -198,6 +217,7 @@ class UdgerParser {
         let q;
         let r;
         let e;
+        let rows
 
         let client_id = 0;
         let client_class_id = -1;
@@ -234,7 +254,7 @@ class UdgerParser {
             'WHERE ua_string=?'
         );
 
-        r = q.get(ua);
+        r = await get(q, ua);
 
         if (r) {
 
@@ -306,7 +326,9 @@ class UdgerParser {
                 'ORDER BY sequence ASC'
             );
 
-            for (r of q.iterate()) {
+            rows = await all(q);
+
+            for (r of rows) {
                 e = ua.match(utils.phpRegexpToJs(r['regstring']));
                 if (e) {
 
@@ -399,7 +421,9 @@ class UdgerParser {
             'ORDER BY sequence ASC'
         );
 
-        for (r of q.iterate()) {
+        rows = await all(q);
+
+        for (r of rows) {
             e = ua.match(utils.phpRegexpToJs(r['regstring']));
             if (e) {
 
@@ -451,7 +475,7 @@ class UdgerParser {
                 'WHERE client_id=?'
             );
 
-            r = q.get(client_id);
+            r = await get(q, client_id);
 
             if (r) {
 
@@ -496,7 +520,9 @@ class UdgerParser {
             'ORDER BY sequence ASC'
         );
 
-        for (r of q.iterate()) {
+        rows = await all(q);
+
+        for (r of rows) {
             e = ua.match(utils.phpRegexpToJs(r['regstring']));
             if (e) {
 
@@ -531,7 +557,7 @@ class UdgerParser {
                 'WHERE udger_client_class.id=?'
             );
 
-            r = q.get(client_class_id);
+            r = await get(q, client_class_id);
 
             if (r) {
 
@@ -578,7 +604,9 @@ class UdgerParser {
 
             let match;
             let rId;
-            for (const r of q.iterate(bindParams)) {
+            rows = await all(q, bindParams);
+
+            for (const r of rows) {
                 e = ua.match(utils.phpRegexpToJs(r['regstring']));
                 if (e && e[1]) {
                     match = e[1].trim();
@@ -594,7 +622,7 @@ class UdgerParser {
                 'WHERE regex_id=? AND code=?'
             );
 
-            const rC = qC.get(rId, match);
+            const rC = await get(qC, rId, match);
 
             if (rC) {
 
@@ -631,7 +659,7 @@ class UdgerParser {
      * Parse the IP Address
      * @param {String} ip - An IPv4 or IPv6 Address
      */
-    parseIp(ip, opts) {
+    async parseIp(ip, opts) {
 
         const rip = JSON.parse(JSON.stringify(this.retIp));
         const ripJson = {};
@@ -678,7 +706,7 @@ class UdgerParser {
             'WHERE ip=? ORDER BY sequence'
         );
 
-        r = q.get(ip);
+        r = await get(q, ip);
 
         if (r) {
 
@@ -771,7 +799,7 @@ class UdgerParser {
                 'WHERE iplong_from <=?  AND iplong_to >=?'
             );
 
-            r = q.get(ipInt, ipInt);
+            r = await get(q, ipInt, ipInt);
 
             if (r) {
 
@@ -813,7 +841,7 @@ class UdgerParser {
                 'iplong_from7 <= @ipInt7 AND iplong_to7 >= @ipInt7'
             );
 
-            r = q.get(ipInts);
+            r = await get(q, ipInts);
 
             if (r) {
 
@@ -844,7 +872,7 @@ class UdgerParser {
      * Main parser
      * @return {Object} Parsing result
      */
-    parse(opts) {
+    async parse(opts) {
 
         if (!this.db) return {};
 
@@ -859,12 +887,12 @@ class UdgerParser {
         if (!opts) opts = {};
 
         if (opts.json) {
-            if (this.ua) ret.userAgent =this.parseUa(this.ua, opts).json;
-            if (this.ip) ret.ipAddress = this.parseIp(this.ip, opts).json;
+            if (this.ua) ret.userAgent = (await this.parseUa(this.ua, opts)).json;
+            if (this.ip) ret.ipAddress = (await this.parseIp(this.ip, opts)).json;
             if (opts.full) ret.fromCache = false;
         } else {
-            ret['user_agent'] = this.parseUa(this.ua, opts).udger;
-            ret['ip_address'] = this.parseIp(this.ip, opts).udger;
+            ret['user_agent'] = (await this.parseUa(this.ua, opts)).udger;
+            ret['ip_address'] = (await this.parseIp(this.ip, opts)).udger;
             ret['from_cache'] = false;
         }
 
@@ -894,7 +922,7 @@ class UdgerParser {
         return true;
     }
 
-    randomUACrawlers(max, callback) {
+    async randomUACrawlers(max, callback) {
 
         if (!this.randomSanityChecks(max, callback)) return;
 
@@ -902,18 +930,18 @@ class UdgerParser {
             'SELECT ua_string FROM udger_crawler_list ORDER BY RANDOM() LIMIT ?'
         );
 
-        callback(null, q.all(max));
+        callback(null, await all(q, max));
         return;
     }
 
-    randomUAClientsRegex(max, callback) {
+    async randomUAClientsRegex(max, callback) {
         if (!this.randomSanityChecks(max, callback)) return;
 
         const q = this.db.prepare(
             'SELECT regstring FROM udger_client_regex ORDER BY RANDOM() LIMIT ?'
         );
 
-        callback(null, q.all(max));
+        callback(null, await all(q, max));
         return;
     }
 
@@ -959,18 +987,18 @@ class UdgerParser {
         });
     }
 
-    randomIPv4(max, callback) {
+    async randomIPv4(max, callback) {
         if (!this.randomSanityChecks(max, callback)) return;
 
         const q = this.db.prepare(
             'SELECT ip FROM udger_ip_list WHERE ip LIKE \'%.%.%.%\' ORDER BY RANDOM() LIMIT ?'
         );
 
-        callback(null, q.all(max));
+        callback(null, await all(q, max));
         return;
     }
 
-    getUAClientsClassification(callback) {
+    async getUAClientsClassification(callback) {
         if (!this.db) {
             callback(new Error('Database not ready'));
             return false;
@@ -980,11 +1008,11 @@ class UdgerParser {
             'SELECT client_classification, client_classification_code FROM udger_client_class'
         );
 
-        callback(null, q.all());
+        callback(null, await all(q));
         return;
     }
 
-    getUACrawlersClassification(callback) {
+    async getUACrawlersClassification(callback) {
         if (!this.db) {
             callback(new Error('Database not ready'));
             return false;
@@ -994,11 +1022,11 @@ class UdgerParser {
             'SELECT crawler_classification, crawler_classification_code FROM udger_crawler_class'
         );
 
-        callback(null, q.all());
+        callback(null, await all(q));
         return;
     }
 
-    getUACrawlersFamilies(callback) {
+    async getUACrawlersFamilies(callback) {
         if (!this.db) {
             callback(new Error('Database not ready'));
             return false;
@@ -1014,11 +1042,11 @@ class UdgerParser {
             'ORDER BY family_code, crawler_classification_code'
         );
 
-        callback(null, q.all());
+        callback(null, await all(q));
         return;
     }
 
-    getDatabaseInfo(callback) {
+    async getDatabaseInfo(callback) {
         if (!this.db) {
             callback(new Error('Database not ready'));
             return false;
@@ -1028,14 +1056,14 @@ class UdgerParser {
             'SELECT * FROM udger_db_info'
         );
 
-        const result = q.get();
+        const result = await get(q);
         delete result.key;
 
         callback(null, result);
         return;
     }
 
-    getIPsClassification(callback) {
+    async getIPsClassification(callback) {
         if (!this.db) {
             callback(new Error('Database not ready'));
             return false;
@@ -1045,7 +1073,7 @@ class UdgerParser {
             'SELECT ip_classification, ip_classification_code FROM udger_ip_class'
         );
 
-        callback(null, q.all());
+        callback(null, await all(q));
         return;
     }
 }
