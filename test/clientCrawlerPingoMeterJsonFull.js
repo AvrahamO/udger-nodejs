@@ -46,9 +46,9 @@ const expected = {
 
 tap.test(
     'User Agent: PingoMeter should be recognized',
-    (t) => {
+    async (t) => {
         config.udgerParser.set({ ua:myUa });
-        const ret = config.udgerParser.parse({ json:true, full:true });
+        const ret = await config.udgerParser.parse({ json:true, full:true });
         t.same(ret, expected);
         t.end();
     }

@@ -21,8 +21,8 @@ tap.test(
 
 tap.test(
     'Connect: parse() should return {} because disconnected',
-    (t) => {
-        const ret = config.udgerParser.parse();
+    async (t) => {
+        const ret = await config.udgerParser.parse();
         t.same(ret, {});
         t.end();
     }
@@ -48,8 +48,8 @@ tap.test(
 
 tap.test(
     'Connect: parse() should return an object',
-    (t) => {
-        const ret = config.udgerParser.parse();
+    async (t) => {
+        const ret = await config.udgerParser.parse();
         t.same(ret, {
             from_cache:false,
             ip_address:{},

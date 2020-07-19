@@ -28,9 +28,9 @@ const expected = {
 
 tap.test(
     'IP Address: '+myIp+' google should be in datacenter ipv4 list',
-    (t) => {
+    async (t) => {
         config.udgerParser.set({ ip:myIp });
-        const ret = config.udgerParser.parse({ json:true });
+        const ret = await config.udgerParser.parse({ json:true });
         t.same(ret, expected);
         t.end();
     }

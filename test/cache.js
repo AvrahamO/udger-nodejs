@@ -37,7 +37,7 @@ expected = config.merge(defaultResult, expected);
 
 tap.test(
     'User Agent: Chrome Browser should be recognized',
-    (t) => {
+    async (t) => {
 
         config.udgerParser.setCacheEnable(true);
         config.udgerParser.setCacheSize(1);
@@ -45,24 +45,24 @@ tap.test(
         let ret;
 
         config.udgerParser.set({ ua:'FakeUAJustToAddAnEntryInTheCache' });
-        config.udgerParser.parse();
+        await config.udgerParser.parse();
 
         expected['from_cache'] = false;
         config.udgerParser.set({ ua:myUa });
-        ret = config.udgerParser.parse();
+        ret = await config.udgerParser.parse();
         t.same(ret, expected, 'should not coming from cache');
 
         expected['from_cache'] = true;
         config.udgerParser.set({ ua:myUa });
-        ret = config.udgerParser.parse();
+        ret = await config.udgerParser.parse();
         t.same(ret, expected, 'should coming from cache');
 
         config.udgerParser.set({ ua:'FakeUAJustToAddAnEntryInTheCache' });
-        config.udgerParser.parse();
+        await config.udgerParser.parse();
 
         expected['from_cache'] = false;
         config.udgerParser.set({ ua:myUa });
-        ret = config.udgerParser.parse();
+        ret = await config.udgerParser.parse();
         t.same(ret, expected, ' should not coming from cache');
 
         t.end();

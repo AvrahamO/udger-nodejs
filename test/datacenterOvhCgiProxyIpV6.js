@@ -25,9 +25,9 @@ expected = config.merge(defaultResult, expected);
 
 tap.test(
     'IP Address: '+myIp+' ovh cgi should be in datacenter ipv6 list',
-    (t) => {
+    async (t) => {
         config.udgerParser.set({ ip:myIp });
-        const ret = config.udgerParser.parse();
+        const ret = await config.udgerParser.parse();
         t.same(ret, expected);
         t.end();
     }

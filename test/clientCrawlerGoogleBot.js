@@ -37,9 +37,9 @@ expected = config.merge(defaultResult, expected);
 
 tap.test(
     'User Agent: GoogleBot should be recognized',
-    (t) => {
+    async (t) => {
         config.udgerParser.set({ ua:myUa });
-        const ret = config.udgerParser.parse();
+        const ret = await config.udgerParser.parse();
         t.same(ret, expected);
         t.end();
     }
