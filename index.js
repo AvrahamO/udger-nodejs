@@ -17,6 +17,18 @@ class UdgerParser {
      */
     constructor(file) {
         this.data = require('./out/udgerdb_v3');
+        this.data.udger_deviceclass_regex.data.forEach(v => {
+            v[this.data.udger_deviceclass_regex.columns.regstring] = utils.phpRegexpToJs(v[this.data.udger_deviceclass_regex.columns.regstring]);
+        });
+        this.data.udger_client_regex.data.forEach(v => {
+            v[this.data.udger_client_regex.columns.regstring] = utils.phpRegexpToJs(v[this.data.udger_client_regex.columns.regstring]);
+        })
+        this.data.udger_os_regex.data.forEach(v => {
+            v[this.data.udger_os_regex.columns.regstring] = utils.phpRegexpToJs(v[this.data.udger_os_regex.columns.regstring]);
+        })
+        this.data.udger_devicename_regex.data.forEach(v => {
+            v[this.data.udger_devicename_regex.columns.regstring] = utils.phpRegexpToJs(v[this.data.udger_devicename_regex.columns.regstring]);
+        })
         this.db = new Database(file, { readonly: true, fileMustExist: true });
         this.file = file;
         this.ip = null;
@@ -334,7 +346,7 @@ class UdgerParser {
             q = this.data.udger_client_regex.columns.regstring;
 
             for (r of this.data.udger_client_regex.data) {
-                e = ua.match(utils.phpRegexpToJs(r[q]));
+                e = ua.match(r[q]);
                 if (e) {
 
                     r = this.map({
@@ -445,7 +457,7 @@ class UdgerParser {
         q = this.data.udger_os_regex.columns.regstring;
 
         for (r of this.data.udger_os_regex.data) {
-            e = ua.match(utils.phpRegexpToJs(r[q]));
+            e = ua.match(r[q]);
             if (e) {
 
                 r = this.map({
@@ -558,7 +570,7 @@ class UdgerParser {
         q = this.data.udger_deviceclass_regex.columns.regstring;
 
         for (r of this.data.udger_deviceclass_regex.data) {
-            e = ua.match(utils.phpRegexpToJs(r[q]));
+            e = ua.match(r[q]);
             if (e) {
 
                 r = this.map({
@@ -654,7 +666,7 @@ class UdgerParser {
             let match;
             let rId;
             for (const r of q) {
-                e = ua.match(utils.phpRegexpToJs(r[regCol]));
+                e = ua.match(r[regCol]);
                 if (e && e[1]) {
                     match = e[1].trim();
                     rId = r[idCol];
