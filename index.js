@@ -1030,22 +1030,28 @@ class UdgerParser {
 
         if (!this.randomSanityChecks(max, callback)) return;
 
-        const q = this.db.prepare(
-            'SELECT ua_string FROM udger_crawler_list ORDER BY RANDOM() LIMIT ?'
-        );
-
-        callback(null, q.all(max));
+        const d = this.data.udger_crawler_list.data.map(v => {
+            return v[this.data.udger_crawler_list.columns.ua_string];
+        });
+        const result = [];
+        for(let i=0; i<max; i++) {
+            result.push({ ua_string: d[Math.floor(Math.random() * d.length)] })
+        }
+        callback(null, result);
         return;
     }
 
     randomUAClientsRegex(max, callback) {
         if (!this.randomSanityChecks(max, callback)) return;
 
-        const q = this.db.prepare(
-            'SELECT regstring FROM udger_client_regex ORDER BY RANDOM() LIMIT ?'
-        );
-
-        callback(null, q.all(max));
+        const d = this.data.udger_client_regex.data.map(v => {
+            return v[this.data.udger_client_regex.columns.regstring];
+        });
+        const result = [];
+        for(let i=0; i<max; i++) {
+            result.push({ regstring: d[Math.floor(Math.random() * d.length)] })
+        }
+        callback(null, result);
         return;
     }
 
@@ -1060,7 +1066,7 @@ class UdgerParser {
             let reClean;
             for (let i = 0, len = results.length; i < len; i++) {
                 regex = new RegExp(results[i].regstring);
-                regexClean = results[i].regstring.replace(/^\//, '');
+                regexClean = results[i].regstring.toString().replace(/^\//, '');
                 regexClean = regexClean.replace(/\/si$/, '');
                 reClean = new RegExp(regexClean);
                 re = new RandExp(reClean);
@@ -1094,11 +1100,20 @@ class UdgerParser {
     randomIPv4(max, callback) {
         if (!this.randomSanityChecks(max, callback)) return;
 
-        const q = this.db.prepare(
-            'SELECT ip FROM udger_ip_list WHERE ip LIKE \'%.%.%.%\' ORDER BY RANDOM() LIMIT ?'
-        );
+        const { columns, data } = this.data.udger_ip_list;
 
-        callback(null, q.all(max));
+        const d = data.filter(v => {
+            return v[columns.ip].match(/[^.]*\.[^.]*\.[^.]*\.[^.]*/);
+        }).map(v => {
+            return v[columns.ip];
+        });
+
+        const result = [];
+        for(let i=0; i<max; i++) {
+            result.push({ ip: d[Math.floor(Math.random() * d.length)] })
+        }
+
+        callback(null, result);
         return;
     }
 
@@ -1108,11 +1123,15 @@ class UdgerParser {
             return false;
         }
 
-        const q = this.db.prepare(
-            'SELECT client_classification, client_classification_code FROM udger_client_class'
-        );
+        const { columns, data } = this.data.udger_client_class;
+        const result = data.map(v => {
+            return {
+                client_classification: v[columns.client_classification],
+                client_classification_code: v[columns.client_classification_code]
+            }
+        })
 
-        callback(null, q.all());
+        callback(null, result);
         return;
     }
 
@@ -1122,11 +1141,15 @@ class UdgerParser {
             return false;
         }
 
-        const q = this.db.prepare(
-            'SELECT crawler_classification, crawler_classification_code FROM udger_crawler_class'
-        );
+        const { columns, data } = this.data.udger_crawler_class;
+        const result = data.map(v => {
+            return {
+                crawler_classification: v[columns.crawler_classification],
+                crawler_classification_code: v[columns.crawler_classification_code]
+            }
+        })
 
-        callback(null, q.all());
+        callback(null, result);
         return;
     }
 
@@ -1136,17 +1159,25 @@ class UdgerParser {
             return false;
         }
 
-        const q = this.db.prepare(
-            'SELECT DISTINCT ' +
-            'udger_crawler_list.family_code,' +
-            'udger_crawler_class.crawler_classification_code ' +
-            'FROM udger_crawler_list ' +
-            'LEFT JOIN udger_crawler_class ON udger_crawler_class.id=udger_crawler_list.class_id ' +
-            'WHERE family_code != "" ' +
-            'ORDER BY family_code, crawler_classification_code'
-        );
+        const { columns, data } = this.data.udger_crawler_list;
+        const result = data
+        .filter((el, i, arr) => arr.findIndex(v => {
+            return v[columns.family_code] && v[columns.family_code] === el[columns.family_code] && v[columns.class_id] === el[columns.class_id];
+        }) === i)
+        .map(v => {
+            return {
+                family_code: v[columns.family_code],
+                crawler_classification_code: this.data.udger_crawler_class.data[v[columns.class_id]][this.data.udger_crawler_class.columns.crawler_classification_code]
+            }
+        })
+        .sort((a,b) => {
+            let ret =
+            a.family_code.localeCompare(b.family_code) ||
+            a.crawler_classification_code.localeCompare(b.crawler_classification_code);
+            return ret;
+        });
 
-        callback(null, q.all());
+        callback(null, result);
         return;
     }
 
@@ -1156,11 +1187,11 @@ class UdgerParser {
             return false;
         }
 
-        const q = this.db.prepare(
-            'SELECT * FROM udger_db_info'
-        );
-
-        const result = q.get();
+        const { columns, data } = this.data.udger_db_info;
+        const result = Object.entries(columns).reduce((acc, [field, column]) => {
+            acc[field] = data[0][column];
+            return acc;
+        }, {})
         delete result.key;
 
         callback(null, result);
@@ -1173,11 +1204,15 @@ class UdgerParser {
             return false;
         }
 
-        const q = this.db.prepare(
-            'SELECT ip_classification, ip_classification_code FROM udger_ip_class'
-        );
+        const { columns, data } = this.data.udger_ip_class;
+        const result = data.map(v => {
+            return {
+                ip_classification: v[columns.ip_classification],
+                ip_classification_code: v[columns.ip_classification_code]
+            }
+        })
 
-        callback(null, q.all());
+        callback(null, result);
         return;
     }
 }
