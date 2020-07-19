@@ -1,4 +1,4 @@
-const udgerParser = require('../')('test/db/udgerdb_v3_test.dat');
+const udgerParser = require('../')('test/db/udgerdb_v3_test.json');
 
 udgerParser.set({
     ua:'Googlebot/2.1 (+http://www.google.com/bot.html)',

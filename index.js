@@ -1,4 +1,3 @@
-const Database = require('better-sqlite3');
 const debug = require('debug')('udger-nodejs');
 const Address6 = require('ip-address').Address6;
 const Address4 = require('ip-address').Address4;
@@ -16,21 +15,20 @@ class UdgerParser {
      * @param {string} file - full path to udgerdb_v3.dat
      */
     constructor(file) {
-        this.data = require('./out/udgerdb_v3');
-        this.data.udger_deviceclass_regex.data.forEach(v => {
-            v[this.data.udger_deviceclass_regex.columns.regstring] = utils.phpRegexpToJs(v[this.data.udger_deviceclass_regex.columns.regstring]);
+        this.file = path.resolve(file);
+        this.db = fs.readJsonSync(this.file);
+        this.db.udger_deviceclass_regex.data.forEach(v => {
+            v[this.db.udger_deviceclass_regex.columns.regstring] = utils.phpRegexpToJs(v[this.db.udger_deviceclass_regex.columns.regstring]);
         });
-        this.data.udger_client_regex.data.forEach(v => {
-            v[this.data.udger_client_regex.columns.regstring] = utils.phpRegexpToJs(v[this.data.udger_client_regex.columns.regstring]);
+        this.db.udger_client_regex.data.forEach(v => {
+            v[this.db.udger_client_regex.columns.regstring] = utils.phpRegexpToJs(v[this.db.udger_client_regex.columns.regstring]);
         })
-        this.data.udger_os_regex.data.forEach(v => {
-            v[this.data.udger_os_regex.columns.regstring] = utils.phpRegexpToJs(v[this.data.udger_os_regex.columns.regstring]);
+        this.db.udger_os_regex.data.forEach(v => {
+            v[this.db.udger_os_regex.columns.regstring] = utils.phpRegexpToJs(v[this.db.udger_os_regex.columns.regstring]);
         })
-        this.data.udger_devicename_regex.data.forEach(v => {
-            v[this.data.udger_devicename_regex.columns.regstring] = utils.phpRegexpToJs(v[this.data.udger_devicename_regex.columns.regstring]);
+        this.db.udger_devicename_regex.data.forEach(v => {
+            v[this.db.udger_devicename_regex.columns.regstring] = utils.phpRegexpToJs(v[this.db.udger_devicename_regex.columns.regstring]);
         })
-        this.db = new Database(file, { readonly: true, fileMustExist: true });
-        this.file = file;
         this.ip = null;
         this.ua = null;
 
@@ -45,18 +43,18 @@ class UdgerParser {
     }
 
     findBy(table, fn) {
-        let { data, columns } = this.data[table];
+        let { data, columns } = this.db[table];
         return data.find(v => fn(v, columns));
     }
 
     filterBy(table, fn) {
-        let { data, columns } = this.data[table];
+        let { data, columns } = this.db[table];
         return data.filter(v => fn(v, columns));
     }
 
     map({ table, row, keys, rename }) {
         if (!row) return {};
-        let { columns } = this.data[table];
+        let { columns } = this.db[table];
         let ret = keys.reduce((acc, key) => {
             acc[key] = row[columns[key]];
             return acc;
@@ -76,7 +74,7 @@ class UdgerParser {
      */
     connect() {
         if (!this.db) {
-            this.db = new Database(this.file, { readonly: true, fileMustExist: true });
+            this.db = fs.readJsonSync(this.file);
             return true;
         }
         return false;
@@ -89,7 +87,6 @@ class UdgerParser {
      */
     disconnect() {
         if (this.db) {
-            this.db.close();
             this.db = null;
             return true;
         }
@@ -278,7 +275,7 @@ class UdgerParser {
             r = {
                 ...r, ...this.map({
                     table: 'udger_crawler_class',
-                    row: this.data.udger_crawler_class.data[r.class_id],
+                    row: this.db.udger_crawler_class.data[r.class_id],
                     keys: ['crawler_classification', 'crawler_classification_code']
                 })
             };
@@ -343,9 +340,9 @@ class UdgerParser {
             }
         } else {
 
-            q = this.data.udger_client_regex.columns.regstring;
+            q = this.db.udger_client_regex.columns.regstring;
 
-            for (r of this.data.udger_client_regex.data) {
+            for (r of this.db.udger_client_regex.data) {
                 e = ua.match(r[q]);
                 if (e) {
 
@@ -357,7 +354,7 @@ class UdgerParser {
                     r = {
                         ...r, ...this.map({
                             table: 'udger_client_list',
-                            row: this.data.udger_client_list.data[r.client_id],
+                            row: this.db.udger_client_list.data[r.client_id],
                             keys: ['id', 'class_id', 'name', 'name_code', 'homepage', 'icon', 'icon_big', 'engine', 'vendor', 'vendor_code', 'vendor_homepage', 'uptodate_current_version'],
                             rename: { id: 'client_id' }
                         })
@@ -365,7 +362,7 @@ class UdgerParser {
                     r = {
                         ...r, ...this.map({
                             table: 'udger_client_class',
-                            row: this.data.udger_client_class.data[r.class_id],
+                            row: this.db.udger_client_class.data[r.class_id],
                             keys: ['id', 'client_classification', 'client_classification_code'],
                             rename: { id: 'class_id' }
                         })
@@ -454,9 +451,9 @@ class UdgerParser {
         // os
         ////////////////////////////////////////////////
 
-        q = this.data.udger_os_regex.columns.regstring;
+        q = this.db.udger_os_regex.columns.regstring;
 
-        for (r of this.data.udger_os_regex.data) {
+        for (r of this.db.udger_os_regex.data) {
             e = ua.match(r[q]);
             if (e) {
 
@@ -468,7 +465,7 @@ class UdgerParser {
                 r = {
                     ...r, ...this.map({
                         table: 'udger_os_list',
-                        row: this.data.udger_os_list.data[r.os_id],
+                        row: this.db.udger_os_list.data[r.os_id],
                         keys: ['id', 'family', 'family_code', 'name', 'name_code', 'homepage', 'icon', 'icon_big', 'vendor', 'vendor_code', 'vendor_homepage'],
                         rename: { id: 'os_id' }
                     })
@@ -527,7 +524,7 @@ class UdgerParser {
                 r = {
                     ...r, ...this.map({
                         table: 'udger_os_list',
-                        row: this.data.udger_os_list.data[r.os_id],
+                        row: this.db.udger_os_list.data[r.os_id],
                         keys: ['id', 'family', 'family_code', 'name', 'name_code', 'homepage', 'icon', 'icon_big', 'vendor', 'vendor_code', 'vendor_homepage'],
                         rename: { id: 'os_id' }
                     })
@@ -567,9 +564,9 @@ class UdgerParser {
         // device
         ////////////////////////////////////////////////
 
-        q = this.data.udger_deviceclass_regex.columns.regstring;
+        q = this.db.udger_deviceclass_regex.columns.regstring;
 
-        for (r of this.data.udger_deviceclass_regex.data) {
+        for (r of this.db.udger_deviceclass_regex.data) {
             e = ua.match(r[q]);
             if (e) {
 
@@ -581,7 +578,7 @@ class UdgerParser {
                 r = {
                     ...r, ...this.map({
                         table: 'udger_deviceclass_list',
-                        row: this.data.udger_deviceclass_list.data[r.deviceclass_id],
+                        row: this.db.udger_deviceclass_list.data[r.deviceclass_id],
                         keys: ['id', 'name', 'name_code', 'icon', 'icon_big'],
                         rename: { id: 'deviceclass_id' }
                     })
@@ -623,7 +620,7 @@ class UdgerParser {
                 r = {
                     ...r, ...this.map({
                         table: 'udger_deviceclass_list',
-                        row: this.data.udger_deviceclass_list.data[r.deviceclass_id],
+                        row: this.db.udger_deviceclass_list.data[r.deviceclass_id],
                         keys: ['id', 'name', 'name_code', 'icon', 'icon_big'],
                         rename: { id: 'deviceclass_id' }
                     })
@@ -655,7 +652,7 @@ class UdgerParser {
         ////////////////////////////////////////////////
 
         if (rua['os_family_code']) {
-            let { regstring: regCol, id: idCol } = this.data.udger_devicename_regex.columns;
+            let { regstring: regCol, id: idCol } = this.db.udger_devicename_regex.columns;
 
             q = this.filterBy('udger_devicename_regex', (row, { os_family_code, os_code }) => {
                 let condition1 = row[os_family_code] === rua['os_family_code'];
@@ -688,7 +685,7 @@ class UdgerParser {
                 rC = {
                     ...rC, ...this.map({
                         table: 'udger_devicename_brand',
-                        row: this.data.udger_devicename_brand.data[rC.brand_id],
+                        row: this.db.udger_devicename_brand.data[rC.brand_id],
                         keys: ['id', 'brand_code', 'brand', 'brand_url', 'icon', 'icon_big'],
                         rename: { id: 'brand_id' }
                     })
@@ -774,7 +771,7 @@ class UdgerParser {
             r = {
                 ...r, ...this.map({
                     table: 'udger_ip_class',
-                    row: this.data.udger_ip_class.data[r.class_id], // `class_id` of udger_ip_list
+                    row: this.db.udger_ip_class.data[r.class_id], // `class_id` of udger_ip_list
                     keys: ['ip_classification', 'ip_classification_code']
                 })
             }
@@ -782,7 +779,7 @@ class UdgerParser {
             r = {
                 ...r, ...this.map({
                     table: 'udger_crawler_list',
-                    row: this.data.udger_crawler_list.data[r.crawler_id],
+                    row: this.db.udger_crawler_list.data[r.crawler_id],
                     keys: [
                         'id', 'name', 'ver', 'ver_major', 'class_id', 'last_seen',
                         'respect_robotstxt', 'family', 'family_code', 'family_homepage',
@@ -794,7 +791,7 @@ class UdgerParser {
             delete r.crawler_id; // Remove `crawler_id` field taken from udger_ip_list
             r = { ...r, ...this.map({
                 table: 'udger_crawler_class',
-                row: this.data.udger_crawler_class.data[r.class_id], // `class_id` of udger_crawler_list
+                row: this.db.udger_crawler_class.data[r.class_id], // `class_id` of udger_crawler_list
                 keys: ['crawler_classification', 'crawler_classification_code']
             })};
             delete r.class_id; // Remove `class_id` field taken from udger_crawler_list
@@ -894,7 +891,7 @@ class UdgerParser {
                 });
                 r = {...r, ...this.map({
                     table: 'udger_datacenter_list',
-                    row: this.data.udger_datacenter_list.data[r.datacenter_id],
+                    row: this.db.udger_datacenter_list.data[r.datacenter_id],
                     keys: ['name', 'name_code', 'homepage']
                 })};
                 delete r.datacenter_id;
@@ -944,7 +941,7 @@ class UdgerParser {
                 });
                 r = {...r, ...this.map({
                     table: 'udger_datacenter_list',
-                    row: this.data.udger_datacenter_list.data[r.datacenter_id],
+                    row: this.db.udger_datacenter_list.data[r.datacenter_id],
                     keys: ['name', 'name_code', 'homepage']
                 })};
                 delete r.datacenter_id;
@@ -1030,8 +1027,8 @@ class UdgerParser {
 
         if (!this.randomSanityChecks(max, callback)) return;
 
-        const d = this.data.udger_crawler_list.data.map(v => {
-            return v[this.data.udger_crawler_list.columns.ua_string];
+        const d = this.db.udger_crawler_list.data.map(v => {
+            return v[this.db.udger_crawler_list.columns.ua_string];
         });
         const result = [];
         for(let i=0; i<max; i++) {
@@ -1044,8 +1041,8 @@ class UdgerParser {
     randomUAClientsRegex(max, callback) {
         if (!this.randomSanityChecks(max, callback)) return;
 
-        const d = this.data.udger_client_regex.data.map(v => {
-            return v[this.data.udger_client_regex.columns.regstring];
+        const d = this.db.udger_client_regex.data.map(v => {
+            return v[this.db.udger_client_regex.columns.regstring];
         });
         const result = [];
         for(let i=0; i<max; i++) {
@@ -1100,7 +1097,7 @@ class UdgerParser {
     randomIPv4(max, callback) {
         if (!this.randomSanityChecks(max, callback)) return;
 
-        const { columns, data } = this.data.udger_ip_list;
+        const { columns, data } = this.db.udger_ip_list;
 
         const d = data.filter(v => {
             return v[columns.ip].match(/[^.]*\.[^.]*\.[^.]*\.[^.]*/);
@@ -1123,7 +1120,7 @@ class UdgerParser {
             return false;
         }
 
-        const { columns, data } = this.data.udger_client_class;
+        const { columns, data } = this.db.udger_client_class;
         const result = data.map(v => {
             return {
                 client_classification: v[columns.client_classification],
@@ -1141,7 +1138,7 @@ class UdgerParser {
             return false;
         }
 
-        const { columns, data } = this.data.udger_crawler_class;
+        const { columns, data } = this.db.udger_crawler_class;
         const result = data.map(v => {
             return {
                 crawler_classification: v[columns.crawler_classification],
@@ -1159,7 +1156,7 @@ class UdgerParser {
             return false;
         }
 
-        const { columns, data } = this.data.udger_crawler_list;
+        const { columns, data } = this.db.udger_crawler_list;
         const result = data
         .filter((el, i, arr) => arr.findIndex(v => {
             return v[columns.family_code] && v[columns.family_code] === el[columns.family_code] && v[columns.class_id] === el[columns.class_id];
@@ -1167,7 +1164,7 @@ class UdgerParser {
         .map(v => {
             return {
                 family_code: v[columns.family_code],
-                crawler_classification_code: this.data.udger_crawler_class.data[v[columns.class_id]][this.data.udger_crawler_class.columns.crawler_classification_code]
+                crawler_classification_code: this.db.udger_crawler_class.data[v[columns.class_id]][this.db.udger_crawler_class.columns.crawler_classification_code]
             }
         })
         .sort((a,b) => {
@@ -1187,7 +1184,7 @@ class UdgerParser {
             return false;
         }
 
-        const { columns, data } = this.data.udger_db_info;
+        const { columns, data } = this.db.udger_db_info;
         const result = Object.entries(columns).reduce((acc, [field, column]) => {
             acc[field] = data[0][column];
             return acc;
@@ -1204,7 +1201,7 @@ class UdgerParser {
             return false;
         }
 
-        const { columns, data } = this.data.udger_ip_class;
+        const { columns, data } = this.db.udger_ip_class;
         const result = data.map(v => {
             return {
                 ip_classification: v[columns.ip_classification],
