@@ -68,6 +68,24 @@ class UdgerParser {
         return ret;
     }
 
+    // Inspired by https://stackoverflow.com/a/29018745/5979775
+    binarySearch(table, compare_fn) {
+        const { columns, data } = this.db[table];
+        var m = 0;
+        var n = data.length - 1;
+        while (m <= n) {
+            var k = (n + m) >> 1;
+            var cmp = compare_fn(data[k], columns);
+            if (cmp > 0) {
+                m = k + 1;
+            } else if(cmp < 0) {
+                n = k - 1;
+            } else {
+                return data[k];
+            }
+        }
+    }
+
     /**
      * Connect (reconnect) sqlite database
      * @return {Boolean} true if db has been opened, false if already connected
@@ -759,7 +777,7 @@ class UdgerParser {
             dotProp.set(ripJson, 'version', ipver);
         }
 
-        q = this.findBy('udger_ip_list', (row, columns) => row[columns.ip] === ip);
+        q = this.binarySearch('udger_ip_list', (row, columns) => ip.localeCompare(row[columns.ip]));
 
         if (q) {
 
