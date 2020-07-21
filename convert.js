@@ -47,6 +47,12 @@ output.udger_ip_list.data.sort((a,b) => {
   return a[ipCol].localeCompare(b[ipCol]);
 })
 
+// Sort crawler list by ua_string ascending
+var ua_stringCol = output.udger_crawler_list.columns.ua_string;
+output.udger_crawler_list.data.sort((a,b) => {
+  return a[ua_stringCol].localeCompare(b[ua_stringCol]);
+})
+
 // Replace foreign id with foreign index
 const relationships = [
   ['udger_crawler_list', 'class_id', 'udger_crawler_class'],

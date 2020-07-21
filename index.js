@@ -276,7 +276,7 @@ class UdgerParser {
         // search for crawlers
         ////////////////////////////////////////////////
 
-        q = this.findBy('udger_crawler_list', (row, { ua_string }) => row[ua_string] === ua);
+        q = this.binarySearch('udger_crawler_list', (row, columns) => ua.localeCompare(row[columns.ua_string]));
 
         if (q) {
 
