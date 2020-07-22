@@ -7,6 +7,13 @@ const dotProp = require('dot-prop');
 const path = require('path');
 const RandExp = require('randexp');
 
+const regexTables = [
+    'udger_deviceclass_regex',
+    'udger_client_regex',
+    'udger_os_regex',
+    'udger_devicename_regex'
+];
+
 /** Class exposing udger parser methods */
 class UdgerParser {
 
@@ -17,18 +24,15 @@ class UdgerParser {
     constructor(file) {
         this.file = path.resolve(file);
         this.db = fs.readJsonSync(this.file);
-        this.db.udger_deviceclass_regex.data.forEach(v => {
-            v[this.db.udger_deviceclass_regex.columns.regstring] = utils.phpRegexpToJs(v[this.db.udger_deviceclass_regex.columns.regstring]);
-        });
-        this.db.udger_client_regex.data.forEach(v => {
-            v[this.db.udger_client_regex.columns.regstring] = utils.phpRegexpToJs(v[this.db.udger_client_regex.columns.regstring]);
-        })
-        this.db.udger_os_regex.data.forEach(v => {
-            v[this.db.udger_os_regex.columns.regstring] = utils.phpRegexpToJs(v[this.db.udger_os_regex.columns.regstring]);
-        })
-        this.db.udger_devicename_regex.data.forEach(v => {
-            v[this.db.udger_devicename_regex.columns.regstring] = utils.phpRegexpToJs(v[this.db.udger_devicename_regex.columns.regstring]);
-        })
+
+        // Pre-compile RegExp objects
+        for(let table of regexTables) {
+            let { columns: { regstring }, data } = this.db[table];
+            data.forEach(v => {
+                v[regstring] = utils.phpRegexpToJs(v[regstring]);
+            })
+        }
+
         this.ip = null;
         this.ua = null;
 

@@ -41,19 +41,23 @@ for (let table of sequenceTables) {
   })
 }
 
-// Sort ip list ascending
-var ipCol = output.udger_ip_list.columns.ip;
-output.udger_ip_list.data.sort((a,b) => {
-  return a[ipCol].localeCompare(b[ipCol]);
-})
+// Sort special table with indexes
+const indexedTables = [{
+  table: 'udger_ip_list',
+  index: 'ip'
+}, {
+  table: 'udger_crawler_list',
+  index: 'ua_string'
+}];
+for (let { table, index } of indexedTables) {
+  let { columns, data } = output[table];
+  index = columns[index];
+  data.sort((a,b) => {
+    return a[index].localeCompare(b[index]);
+  })
+}
 
-// Sort crawler list by ua_string ascending
-var ua_stringCol = output.udger_crawler_list.columns.ua_string;
-output.udger_crawler_list.data.sort((a,b) => {
-  return a[ua_stringCol].localeCompare(b[ua_stringCol]);
-})
-
-// Replace foreign id with foreign index
+// Replace foreign id with foreign array index
 const relationships = [
   ['udger_crawler_list', 'class_id', 'udger_crawler_class'],
   ['udger_client_regex', 'client_id', 'udger_client_list'],
